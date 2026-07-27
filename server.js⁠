@@ -1,0 +1,152 @@
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
+
+app.use(express.json());
+
+let timer = 30;
+let currentPeriod = "202607271000" + Math.floor(100 + Math.random() * 900);
+let forcedResult = null;
+
+// User & Admin Single Interface
+app.get('/', (req, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SUUUI WIN - Live Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body class="bg-[#050814] text-white font-sans max-w-md mx-auto min-h-screen border-x border-blue-900/30 pb-10">
+
+  <!-- Header -->
+  <div class="bg-[#0b132b] p-4 flex justify-between items-center border-b border-blue-900/40">
+    <h1 class="text-xl font-black tracking-wider text-red-500 flex items-center gap-1">
+      ⚽ SUUUI <span class="text-blue-400">WIN</span>
+    </h1>
+    <div class="bg-blue-950/80 border border-blue-800/50 px-3 py-1 rounded-full text-xs">
+      Balance: <span class="font-bold text-green-400">₹1,000.00</span>
+    </div>
+  </div>
+
+  <!-- WinGo Game Board -->
+  <div class="p-4">
+    <div class="bg-[#0b132b] p-4 rounded-xl border border-blue-900/40 shadow-2xl">
+      <div class="flex justify-between items-center mb-4 bg-[#1c2541] p-3 rounded-lg">
+        <div>
+          <span class="text-xs text-blue-400 block font-semibold">Period</span>
+          <span id="periodId" class="text-xs font-bold text-gray-200">Loading...</span>
+        </div>
+        <div class="text-right">
+          <span class="text-xs text-blue-400 block font-semibold">Time Remaining</span>
+          <div id="timerDisplay" class="text-lg font-black text-red-500 bg-black/50 px-3 py-0.5 rounded border border-red-900/30">
+            00:30
+          </div>
+        </div>
+      </div>
+
+      <!-- Color Buttons -->
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <button onclick="bet('Green')" class="bg-green-600 hover:bg-green-700 py-2.5 rounded-lg text-sm font-extrabold shadow-lg">Green</button>
+        <button onclick="bet('Violet')" class="bg-purple-600 hover:bg-purple-700 py-2.5 rounded-lg text-sm font-extrabold shadow-lg">Violet</button>
+        <button onclick="bet('Red')" class="bg-red-600 hover:bg-red-700 py-2.5 rounded-lg text-sm font-extrabold shadow-lg">Red</button>
+      </div>
+
+      <!-- Numbers Grid -->
+      <div class="grid grid-cols-5 gap-2 mb-4 bg-[#1c2541]/40 p-2 rounded-lg">
+        <button onclick="bet('0')" class="w-10 h-10 rounded-full bg-gradient-to-r from-red-500 to-purple-500 font-extrabold mx-auto">0</button>
+        <button onclick="bet('1')" class="w-10 h-10 rounded-full bg-green-500 font-extrabold mx-auto">1</button>
+        <button onclick="bet('2')" class="w-10 h-10 rounded-full bg-red-500 font-extrabold mx-auto">2</button>
+        <button onclick="bet('3')" class="w-10 h-10 rounded-full bg-green-500 font-extrabold mx-auto">3</button>
+        <button onclick="bet('4')" class="w-10 h-10 rounded-full bg-red-500 font-extrabold mx-auto">4</button>
+        <button onclick="bet('5')" class="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-purple-500 font-extrabold mx-auto">5</button>
+        <button onclick="bet('6')" class="w-10 h-10 rounded-full bg-red-500 font-extrabold mx-auto">6</button>
+        <button onclick="bet('7')" class="w-10 h-10 rounded-full bg-green-500 font-extrabold mx-auto">7</button>
+        <button onclick="bet('8')" class="w-10 h-10 rounded-full bg-red-500 font-extrabold mx-auto">8</button>
+        <button onclick="bet('9')" class="w-10 h-10 rounded-full bg-green-500 font-extrabold mx-auto">9</button>
+      </div>
+
+      <!-- Big / Small -->
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="bet('Big')" class="bg-gradient-to-r from-red-600 to-red-800 font-black py-3 rounded-lg uppercase tracking-wider text-sm">Big</button>
+        <button onclick="bet('Small')" class="bg-gradient-to-r from-blue-600 to-blue-800 font-black py-3 rounded-lg uppercase tracking-wider text-sm">Small</button>
+      </div>
+    </div>
+
+    <!-- Admin Fast Override Box -->
+    <div class="mt-6 bg-[#1c2541] p-4 rounded-xl border border-red-500/40">
+      <h3 class="text-xs font-bold text-red-400 uppercase tracking-widest mb-1">👑 Admin Control Panel</h3>
+      <p class="text-[11px] text-gray-400 mb-2">Next result number (0-9) fix karo:</p>
+      <div class="flex gap-2">
+        <input id="adminNum" type="number" min="0" max="9" placeholder="0-9" class="w-20 bg-black/60 px-3 py-1.5 rounded text-sm text-center font-bold text-yellow-400 border border-gray-700">
+        <button onclick="setAdminResult()" class="bg-red-600 px-4 py-1.5 rounded text-xs font-bold">Fix Result</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    socket.on('timerTick', (data) => {
+      document.getElementById('timerDisplay').innerText = \`00:\${data.timer < 10 ? '0' : ''}\${data.timer}\`;
+      document.getElementById('periodId').innerText = data.periodId;
+    });
+
+    socket.on('gameResult', (data) => {
+      alert(\`🎉 Period \${data.periodId} Result:\\nNumber: \${data.number}\\nColor: \${data.color}\\nSize: \${data.size}\`);
+    });
+
+    function bet(option) {
+      alert('Bet placed on: ' + option);
+    }
+
+    function setAdminResult() {
+      const num = document.getElementById('adminNum').value;
+      if(num === '' || num < 0 || num > 9) return alert('Enter number between 0-9');
+      
+      fetch('/api/admin/override', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number: parseInt(num) })
+      }).then(r => r.json()).then(d => alert(d.message));
+    }
+  </script>
+</body>
+</html>
+  `);
+});
+
+app.post('/api/admin/override', (req, res) => {
+  forcedResult = req.body.number;
+  res.json({ success: true, message: `Next result fixed to number ${forcedResult}` });
+});
+
+setInterval(() => {
+  timer--;
+  if (timer === 0) {
+    let winningNumber = forcedResult !== null ? forcedResult : Math.floor(Math.random() * 10);
+    forcedResult = null;
+
+    let color = winningNumber % 2 === 0 ? 'Red' : 'Green';
+    if (winningNumber === 0) color = 'Red+Violet';
+    if (winningNumber === 5) color = 'Green+Violet';
+    let size = winningNumber >= 5 ? 'Big' : 'Small';
+
+    io.emit('gameResult', { periodId: currentPeriod, number: winningNumber, color, size });
+
+    timer = 30;
+    currentPeriod = "202607271000" + Math.floor(100 + Math.random() * 900);
+  }
+
+  io.emit('timerTick', { timer, periodId: currentPeriod });
+}, 1000);
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log('Server running'));
