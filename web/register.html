@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SUUUI WIN - Register</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.3.0/axios.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-purple-900 via-blue-900 to-black min-h-screen flex items-center justify-center p-4">
+
+<div class="w-full max-w-md">
+  <div class="bg-gray-900 rounded-lg shadow-2xl p-8 border border-gray-700">
+    <h1 class="text-4xl font-bold text-white text-center mb-2">🎮 SUUUI WIN</h1>
+    <p class="text-center text-gray-400 mb-8">Create Account</p>
+    
+    <form onsubmit="userRegister(event)" class="space-y-4">
+      <div>
+        <label class="block text-gray-300 mb-2 font-semibold">Phone Number</label>
+        <input type="tel" id="phoneNumber" required class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none" placeholder="+919876543210">
+      </div>
+      
+      <div>
+        <label class="block text-gray-300 mb-2 font-semibold">Password</label>
+        <input type="password" id="password" required class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none" placeholder="••••••••">
+      </div>
+
+      <div>
+        <label class="block text-gray-300 mb-2 font-semibold">Confirm Password</label>
+        <input type="password" id="confirmPassword" required class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none" placeholder="••••••••">
+      </div>
+
+      <div>
+        <label class="block text-gray-300 mb-2 font-semibold">Invite Code (Optional)</label>
+        <input type="text" id="inviteCode" class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none" placeholder="Enter invite code">
+      </div>
+      
+      <button type="submit" class="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-bold py-3 rounded-lg transition">
+        ✅ Register
+      </button>
+    </form>
+    
+    <p class="text-center text-gray-400 mt-6">
+      Already have account? <a href="login.html" class="text-purple-400 hover:text-purple-300 font-semibold">Login</a>
+    </p>
+  </div>
+</div>
+
+<script>
+const API_URL = 'http://localhost:5000/api';
+
+async function userRegister(event) {
+  event.preventDefault();
+  
+  const phoneNumber = document.getElementById('phoneNumber').value;
+  const password = document.getElementById('password').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+  const inviteCode = document.getElementById('inviteCode').value;
+
+  if (password !== confirmPassword) {
+    alert('Passwords do not match!');
+    return;
+  }
+  
+  try {
+    const response = await axios.post(`${API_URL}/auth/register`, {
+      phoneNumber,
+      password,
+      inviteCode: inviteCode || null
+    });
+    
+    alert('✅ Registration successful! Please login.');
+    window.location.href = 'login.html';
+  } catch (error) {
+    alert(error.response?.data?.error || 'Registration failed');
+  }
+}
+</script>
+
+</body>
+</html>
