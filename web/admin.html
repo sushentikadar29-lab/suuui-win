@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SUUUI WIN - Admin Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.3.0/axios.min.js"></script>
+  <style>
+    .admin-bg { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); }
+    .stat-card { @apply bg-gray-800 border border-gray-700 rounded-lg p-6; }
+    .btn-primary { @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition; }
+    .btn-danger { @apply bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition; }
+    .btn-success { @apply bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition; }
+  </style>
+</head>
+<body class="admin-bg text-white">
+
+<!-- Login Page -->
+<div id="loginPage" class="min-h-screen flex items-center justify-center p-4">
+  <div class="bg-gray-900 rounded-lg shadow-2xl p-8 w-full max-w-md border border-gray-700">
+    <h1 class="text-3xl font-bold text-center mb-2">🔐 ADMIN LOGIN</h1>
+    <p class="text-center text-gray-400 mb-6">SUUUI WIN Administration Panel</p>
+    
+    <form onsubmit="adminLogin(event)" class="space-y-4">
+      <div>
+        <label class="block text-gray-300 mb-2">Username</label>
+        <input type="text" id="adminUsername" required class="w-full bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none" placeholder="admin">
+      </div>
+      
+      <div>
+        <label class="block text-gray-300 mb-2">Password</label>
+        <input type="password" id="adminPassword" required class="w-full bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none" placeholder="••••••••">
+      </div>
+      
+      <button type="submit" class="btn-primary w-full py-3">
+        Login to Admin Panel
+      </button>
+    </form>
+    
+    <p class="text-center text-gray-400 text-sm mt-4">🔒 Only authorized administrators can access this panel</p>
+  </div>
+</div>
+
+<!-- Admin Dashboard -->
+<div id="adminDashboard" class="hidden">
+  <!-- Top Navigation -->
+  <nav class="bg-gray-900 border-b border-gray-700 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold">⚙️ ADMIN DASHBOARD</h1>
+      <div class="flex items-center gap-4">
+        <span id="adminUsername" class="text-blue-400 font-bold"></span>
+        <div class="flex gap-2">
+          <button onclick="switchTab('dashboard')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded">Dashboard</button>
+          <button onclick="switchTab('gameControl')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded">Game Control</button>
+          <button onclick="switchTab('deposits')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded">Deposits</button>
+          <button onclick="switchTab('withdrawals')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded">Withdrawals</button>
+          <button onclick="switchTab('users')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded">Users</button>
+          <button onclick="switchTab('logs')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded">Audit Logs</button>
+          <button onclick="adminLogout()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded">Logout</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto p-6">
+
+    <!-- Dashboard Tab -->
+    <div id="dashboardTab" class="space-y-6">
+      <h2 class="text-3xl font-bold mb-6">📊 Dashboard Overview</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="stat-card">
+          <p class="text-gray-400 text-sm">Total Users</p>
+          <p class="text-3xl font-bold text-blue-400" id="totalUsers">0</p>
+        </div>
+        <div class="stat-card">
+          <p class="text-gray-400 text-sm">Banned Users</p>
+          <p class="text-3xl font-bold text-red-400" id="bannedUsers">0</p>
+        </div>
+        <div class="stat-card">
+          <p class="text-gray-400 text-sm">Pending Deposits</p>
+          <p class="text-3xl font-bold text-yellow-400" id="pendingDeposits">0</p>
+        </div>
+        <div class="stat-card">
+          <p class="text-gray-400 text-sm">Pending Withdrawals</p>
+          <p class="text-3xl font-bold text-orange-400" id="pendingWithdrawals">0</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <h3 class="text-xl font-bold mb-4">👥 Admin Info</h3>
+        <p class="text-gray-300">Role: <span id="adminRole" class="text-blue-400 font-bold">ADMIN</span></p>
+        <p class="text-gray-300">Permissions: 
+          <span id="adminPerms" class="text-green-400 font-bold">Can Verify Deposits</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Game Control Tab -->
+    <div id="gameControlTab" class="hidden space-y-6">
+      <h2 class="text-3xl font-bold mb-6">🎮 Game Result Control</h2>
+      
+      <div class="stat-card">
+        <h3 class="text-xl font-bold mb-4">⚡ Override Game Result</h3>
+        <p class="text-gray-400 mb-4">⚠️ MASTER_ADMIN ONLY - This will set the winning number for the current period</p>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-gray-300 mb-2">Current Period ID</label>
+            <input type="text" id="periodId" readonly class="w-full bg-gray-700 text-gray-300 px-4 py-2 rounded-lg border border-gray-600">
+          </div>
+
+          <div>
+            <label class="block text-gray-300 mb-2">Winning Number (0-9)</label>
+            <div class="grid grid-cols-5 gap-2">
+              <button onclick="selectNumber(0)" class="number-btn bg-purple-600 hover:bg-purple-700 py-3 rounded font-bold text-xl">0</button>
+              <button onclick="selectNumber(1)" class="number-btn bg-purple-600 hover:bg-purple-700 py-3 rounded font-bold text-xl">1</button>
+              <button onclick="selectNumber(2)" class="number-btn bg-purple-600 hover:bg-purple-700 py-3 rounded font-bold text-xl">2</button>
+              <button onclick="selectNumber(3)" class="number-btn bg-purple-600 hover:bg-purple-700 py-3 rounded font-bold text-xl">3</button>
+              <button onclick="selectNumber(4)" class="number-btn bg-purple-600 hover:bg-purple-700 py-3 rounded font-bold text-xl">4</button>
+              <button onclick="selectNumber(5)" class="number-btn bg-purple-600 hover:bg-purple-700 py-3 rounded font-bold text-xl">5</button>
+              <button onclick="selectNumber(6)" class="number-btn bg-purple-600 hover:bg-purple-700 py-3 rounded font-bold text-xl">6</button>
+              <button onclick="selectNumber(7)" class="number-btn bg-purple-600 hover:bg-purple-700 py-3 rounded font-bold text-xl">7</button>
+              <button onclick="selectNumber(8)" class="number-btn bg-purple-600 hover:bg-purple-700 py-3 rounded font-bold text-xl">8</button>
+              <button onclick="selectNumber(9)" class="number-btn bg-purple-600 hover:bg-purple-700 py-3 rounded font-bold text-xl">9</button>
+            </div>
+            <p class="text-gray-400 mt-2">Selected: <span id="selectedNumber" class="text-yellow-400 font-bold">None</span></p>
+          </div>
+
+          <button onclick="setGameResult()" class="btn-success w-full py-3">🔒 LOCK RESULT</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Deposits Tab -->
+    <div id="depositsTab" class="hidden space-y-6">
+      <h2 class="text-3xl font-bold mb-6">💰 Deposit Verification</h2>
+      
+      <div class="stat-card overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="border-b border-gray-600">
+            <tr class="text-gray-400">
+              <th class="text-left py-3 px-2">User ID</th>
+              <th class="text-left py-3 px-2">Amount</th>
+              <th class="text-left py-3 px-2">Method</th>
+              <th class="text-left py-3 px-2">Status</th>
+              <th class="text-left py-3 px-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="depositsTable">
+            <tr><td colspan="5" class="text-center py-4 text-gray-400">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Withdrawals Tab -->
+    <div id="withdrawalsTab" class="hidden space-y-6">
+      <h2 class="text-3xl font-bold mb-6">🏦 Withdrawal Processing</h2>
+      
+      <div class="stat-card overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="border-b border-gray-600">
+            <tr class="text-gray-400">
+              <th class="text-left py-3 px-2">User ID</th>
+              <th class="text-left py-3 px-2">Amount</th>
+              <th class="text-left py-3 px-2">Method</th>
+              <th class="text-left py-3 px-2">Status</th>
+              <th class="text-left py-3 px-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="withdrawalsTable">
+            <tr><td colspan="5" class="text-center py-4 text-gray-400">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Users Tab -->
+    <div id="usersTab" class="hidden space-y-6">
+      <h2 class="text-3xl font-bold mb-6">👥 User Management</h2>
+      
+      <div class="stat-card space-y-4">
+        <input type="text" id="searchUser" placeholder="Search by phone number..." class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none">
+        
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="border-b border-gray-600">
+              <tr class="text-gray-400">
+                <th class="text-left py-3 px-2">User ID</th>
+                <th class="text-left py-3 px-2">Phone</th>
+                <th class="text-left py-3 px-2">Balance</th>
+                <th class="text-left py-3 px-2">Status</th>
+                <th class="text-left py-3 px-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTable">
+              <tr><td colspan="5" class="text-center py-4 text-gray-400">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Logs Tab -->
+    <div id="logsTab" class="hidden space-y-6">
+      <h2 class="text-3xl font-bold mb-6">📋 Audit Logs</h2>
+      
+      <div class="stat-card overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="border-b border-gray-600">
+            <tr class="text-gray-400">
+              <th class="text-left py-3 px-2">Admin</th>
+              <th class="text-left py-3 px-2">Action</th>
+              <th class="text-left py-3 px-2">Details</th>
+              <th class="text-left py-3 px-2">Timestamp</th>
+              <th class="text-left py-3 px-2">IP Address</th>
+            </tr>
+          </thead>
+          <tbody id="logsTable">
+            <tr><td colspan="5" class="text-center py-4 text-gray-400">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API_URL = 'http://localhost:5000/api';
+let adminToken = null;
+let selectedNumber = null;
+let currentPeriodId = '';
+
+// Admin Login
+async function adminLogin(event) {
+  event.preventDefault();
+  
+  const username = document.getElementById('adminUsername').value;
+  const password = document.getElementById('adminPassword').value;
+  
+  try {
+    const response = await axios.post(`${API_URL}/admin/login`, { username, password });
+    
+    if (response.data.success) {
+      adminToken = response.data.token;
+      localStorage.setItem('adminToken', adminToken);
+      
+      document.getElementById('loginPage').classList.add('hidden');
+      document.getElementById('adminDashboard').classList.remove('hidden');
+      
+      document.getElementById('adminUsername').textContent = response.data.admin.username;
+      document.getElementById('adminRole').textContent = response.data.admin.role;
+      
+      loadDashboardData();
+      loadAuditLogs();
+      startGameUpdates();
+    }
+  } catch (error) {
+    alert(error.response?.data?.error || 'Login failed');
+  }
+}
+
+// Admin Logout
+function adminLogout() {
+  localStorage.removeItem('adminToken');
+  adminToken = null;
+  document.getElementById('adminDashboard').classList.add('hidden');
+  document.getElementById('loginPage').classList.remove('hidden');
+  document.getElementById('adminUsername').value = '';
+  document.getElementById('adminPassword').value = '';
+}
+
+// Switch Tabs
+function switchTab(tab) {
+  document.querySelectorAll('[id$="Tab"]').forEach(t => t.classList.add('hidden'));
+  document.getElementById(tab + 'Tab').classList.remove('hidden');
+  
+  if (tab === 'deposits') loadPendingDeposits();
+  if (tab === 'withdrawals') loadPendingWithdrawals();
+  if (tab === 'users') loadUsers();
+}
+
+// Load Dashboard Data
+async function loadDashboardData() {
+  try {
+    const response = await axios.get(`${API_URL}/admin/dashboard-stats`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    
+    const stats = response.data.stats;
+    document.getElementById('totalUsers').textContent = stats.totalUsers;
+    document.getElementById('bannedUsers').textContent = stats.bannedUsers;
+    document.getElementById('pendingDeposits').textContent = stats.pendingDeposits || '0';
+    document.getElementById('pendingWithdrawals').textContent = stats.pendingWithdrawals || '0';
+  } catch (error) {
+    console.error('Error loading dashboard:', error);
+  }
+}
+
+// Select Number
+function selectNumber(num) {
+  selectedNumber = num;
+  document.getElementById('selectedNumber').textContent = num;
+  document.querySelectorAll('.number-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-yellow-400'));
+  event.target.classList.add('ring-2', 'ring-yellow-400');
+}
+
+// Set Game Result
+async function setGameResult() {
+  if (selectedNumber === null) {
+    alert('Please select a number');
+    return;
+  }
+  
+  try {
+    const response = await axios.post(`${API_URL}/admin/set-game-result`, {
+      periodId: currentPeriodId,
+      forcedNumber: selectedNumber,
+      gameType: 'WinGo_30s'
+    }, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    
+    alert(`✅ Game result set to ${selectedNumber}`);
+    selectedNumber = null;
+    document.getElementById('selectedNumber').textContent = 'None';
+  } catch (error) {
+    alert(error.response?.data?.error || 'Failed to set result');
+  }
+}
+
+// Load Pending Deposits
+async function loadPendingDeposits() {
+  try {
+    const response = await axios.get(`${API_URL}/deposits/admin/pending-deposits`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    
+    const table = document.getElementById('depositsTable');
+    table.innerHTML = response.data.deposits.map(d => `
+      <tr class="border-b border-gray-700 hover:bg-gray-700">
+        <td class="py-3 px-2">${d.userId}</td>
+        <td class="py-3 px-2">₹${d.amount}</td>
+        <td class="py-3 px-2">${d.depositMethod}</td>
+        <td class="py-3 px-2"><span class="bg-yellow-600 px-2 py-1 rounded text-xs">${d.status}</span></td>
+        <td class="py-3 px-2 space-x-2">
+          <button onclick="approveDeposit('${d._id}')" class="btn-success py-1 px-2 text-xs">Approve</button>
+          <button onclick="rejectDeposit('${d._id}')" class="btn-danger py-1 px-2 text-xs">Reject</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (error) {
+    console.error('Error loading deposits:', error);
+  }
+}
+
+// Approve Deposit
+async function approveDeposit(depositId) {
+  try {
+    const response = await axios.post(`${API_URL}/deposits/admin/verify-deposit`, {
+      depositRequestId: depositId,
+      approved: true
+    }, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    alert('✅ Deposit approved');
+    loadPendingDeposits();
+  } catch (error) {
+    alert(error.response?.data?.error || 'Failed to approve');
+  }
+}
+
+// Reject Deposit
+async function rejectDeposit(depositId) {
+  const reason = prompt('Rejection reason:');
+  if (!reason) return;
+  
+  try {
+    const response = await axios.post(`${API_URL}/deposits/admin/verify-deposit`, {
+      depositRequestId: depositId,
+      approved: false,
+      notes: reason
+    }, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    alert('❌ Deposit rejected');
+    loadPendingDeposits();
+  } catch (error) {
+    alert(error.response?.data?.error || 'Failed to reject');
+  }
+}
+
+// Load Pending Withdrawals
+async function loadPendingWithdrawals() {
+  try {
+    const response = await axios.get(`${API_URL}/withdrawals/admin/pending-withdrawals`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    
+    const table = document.getElementById('withdrawalsTable');
+    table.innerHTML = response.data.withdrawals.map(w => `
+      <tr class="border-b border-gray-700 hover:bg-gray-700">
+        <td class="py-3 px-2">${w.userId}</td>
+        <td class="py-3 px-2">₹${w.amount}</td>
+        <td class="py-3 px-2">${w.withdrawalMethod}</td>
+        <td class="py-3 px-2"><span class="bg-yellow-600 px-2 py-1 rounded text-xs">${w.status}</span></td>
+        <td class="py-3 px-2 space-x-2">
+          <button onclick="approveWithdrawal('${w._id}')" class="btn-success py-1 px-2 text-xs">Approve</button>
+          <button onclick="rejectWithdrawal('${w._id}')" class="btn-danger py-1 px-2 text-xs">Reject</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (error) {
+    console.error('Error loading withdrawals:', error);
+  }
+}
+
+// Approve Withdrawal
+async function approveWithdrawal(withdrawalId) {
+  try {
+    const response = await axios.post(`${API_URL}/withdrawals/admin/process-withdrawal`, {
+      withdrawalRequestId: withdrawalId,
+      approved: true
+    }, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    alert('✅ Withdrawal approved');
+    loadPendingWithdrawals();
+  } catch (error) {
+    alert(error.response?.data?.error || 'Failed to approve');
+  }
+}
+
+// Reject Withdrawal
+async function rejectWithdrawal(withdrawalId) {
+  const reason = prompt('Rejection reason:');
+  if (!reason) return;
+  
+  try {
+    const response = await axios.post(`${API_URL}/withdrawals/admin/process-withdrawal`, {
+      withdrawalRequestId: withdrawalId,
+      approved: false,
+      rejectionReason: reason
+    }, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    alert('❌ Withdrawal rejected');
+    loadPendingWithdrawals();
+  } catch (error) {
+    alert(error.response?.data?.error || 'Failed to reject');
+  }
+}
+
+// Load Users
+async function loadUsers() {
+  try {
+    const response = await axios.get(`${API_URL}/admin/all-users`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    
+    const table = document.getElementById('usersTable');
+    table.innerHTML = response.data.users.map(u => `
+      <tr class="border-b border-gray-700 hover:bg-gray-700">
+        <td class="py-3 px-2">${u._id}</td>
+        <td class="py-3 px-2">${u.phoneNumber}</td>
+        <td class="py-3 px-2">₹${u.walletBalance.toFixed(2)}</td>
+        <td class="py-3 px-2"><span class="${u.isBanned ? 'bg-red-600' : 'bg-green-600'} px-2 py-1 rounded text-xs">${u.isBanned ? 'Banned' : 'Active'}</span></td>
+        <td class="py-3 px-2">
+          <button onclick="toggleUserBan('${u._id}', ${!u.isBanned})" class="${u.isBanned ? 'btn-success' : 'btn-danger'} py-1 px-2 text-xs">
+            ${u.isBanned ? 'Unban' : 'Ban'}
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (error) {
+    console.error('Error loading users:', error);
+  }
+}
+
+// Toggle User Ban
+async function toggleUserBan(userId, isBanned) {
+  const reason = isBanned ? '' : prompt('Ban reason:');
+  if (!isBanned && !reason) return;
+  
+  try {
+    const response = await axios.post(`${API_URL}/admin/toggle-user-ban/${userId}`, {
+      isBanned: isBanned,
+      reason: reason
+    }, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    loadUsers();
+  } catch (error) {
+    alert(error.response?.data?.error || 'Failed');
+  }
+}
+
+// Load Audit Logs
+async function loadAuditLogs() {
+  try {
+    const response = await axios.get(`${API_URL}/admin/audit-logs`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    
+    const table = document.getElementById('logsTable');
+    table.innerHTML = response.data.logs.map(log => `
+      <tr class="border-b border-gray-700">
+        <td class="py-3 px-2">${log.adminId?.username || 'Unknown'}</td>
+        <td class="py-3 px-2"><span class="bg-blue-600 px-2 py-1 rounded text-xs">${log.action}</span></td>
+        <td class="py-3 px-2 text-xs">${JSON.stringify(log.details).substring(0, 50)}...</td>
+        <td class="py-3 px-2 text-xs">${new Date(log.timestamp).toLocaleString()}</td>
+        <td class="py-3 px-2 text-xs">${log.ipAddress}</td>
+      </tr>
+    `).join('');
+  } catch (error) {
+    console.error('Error loading logs:', error);
+  }
+}
+
+// Start Game Updates
+function startGameUpdates() {
+  setInterval(async () => {
+    try {
+      const response = await axios.get(`${API_URL}/game/current-period`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      currentPeriodId = response.data.periodId;
+      document.getElementById('periodId').value = currentPeriodId;
+    } catch (error) {
+      // Silent error
+    }
+  }, 1000);
+}
+
+// Check if already logged in
+window.addEventListener('load', () => {
+  const token = localStorage.getItem('adminToken');
+  if (token) {
+    adminToken = token;
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('adminDashboard').classList.remove('hidden');
+    loadDashboardData();
+  }
+});
+</script>
+
+</body>
+</html>
